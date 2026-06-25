@@ -88,18 +88,24 @@ streamlit run router_app.py
 | --- | --- | --- |
 | `ROUTE_THRESHOLD` | `0.5` | 매칭 유사도가 이 값 미만이면 '낮은 신뢰도' 경고 표시 |
 
-## 동작 방식 (`workflows.py`)
+## 동작 방식 (기능별 모듈)
 
-- `create_workflow(name, description)` — 고유 id 발급 + 이름·설명을 임베딩해 벡터 DB 저장
-- `match_workflow(query)` — 벡터 검색으로 후보를 좁히고 LLM이 가장 적합한 워크플로우 id 확정
-- `run_workflow_api(workflow_id, request)` — 확인 후 해당 id로 가상 API 호출 (실행 시뮬레이션)
+- **`workflows.py`** — 워크플로우 저장소: `create_workflow` / `list_workflows` / `count_workflows` / `search_workflows` (Qdrant 접근)
+- **`matching.py`** — `match_workflow(query)` : 벡터 검색으로 후보를 좁히고 LLM이 가장 적합한 워크플로우 id 확정 (system 한정)
+- **`feedback.py`** — `save_confirmed` / `save_rejected` : 확인·거절 신호를 학습해 매칭 정확도 향상
+- **`executor.py`** — `run_workflow_api(workflow_id, request)` : 확인 후 해당 id로 가상 API 호출
+- **`fallback.py`** — `general_answer(query, history)` : 매칭 실패 시 LLM 직접 답변(단기 기억 포함)
 
 ## 파일 구조
 
 ```
 .
 ├── router_app.py  # Streamlit UI (진입점): 워크플로우 생성 + 요청 매칭 + 확인/실행
-├── workflows.py   # 워크플로우 생성·조회 + 요청 매칭 + API 호출
+├── workflows.py   # 워크플로우 저장소 (생성·조회·벡터 검색)
+├── matching.py    # 요청 → 워크플로우 매칭 (벡터 + LLM 확정)
+├── feedback.py    # 확인/거절 학습 (example·negative 저장)
+├── executor.py    # 확정된 id로 API 호출 (실행)
+├── fallback.py    # 매칭 실패 시 LLM 직접 답변
 ├── config.py      # 환경변수 · 상수 설정
 ├── clients.py     # Qdrant / LLM 클라이언트 초기화
 ├── run.ipynb      # 앱을 백그라운드로 띄우고 종료하는 노트북

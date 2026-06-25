@@ -9,16 +9,11 @@
 import streamlit as st
 
 import config
-from workflows import (
-    count_workflows,
-    create_workflow,
-    general_answer,
-    list_workflows,
-    match_workflow,
-    run_workflow_api,
-    save_confirmed,
-    save_rejected,
-)
+from executor import run_workflow_api
+from fallback import general_answer
+from feedback import save_confirmed, save_rejected
+from matching import match_workflow
+from workflows import count_workflows, create_workflow, list_workflows
 
 st.title("의미 기반 워크플로우 라우터")
 st.caption("요청 의도를 분석해 알맞은 워크플로우를 찾고, 확인을 거친 뒤에 실행합니다.")
@@ -83,9 +78,16 @@ with st.sidebar:
         "설명", height=100,
         placeholder="이 워크플로우가 어떤 요청을 처리하는지 적어주세요",
     )
+    # 구분: system(시스템 제공) vs 일반(사용자 정의)
+    CATEGORY_LABELS = {"general": "일반", "system": "시스템(system)"}
+    wf_category = st.selectbox(
+        "구분",
+        options=list(CATEGORY_LABELS),
+        format_func=lambda c: CATEGORY_LABELS[c],
+    )
     if st.button("생성", use_container_width=True):
         if wf_name.strip() and wf_desc.strip():
-            wf = create_workflow(wf_name, wf_desc)
+            wf = create_workflow(wf_name, wf_desc, wf_category)
             st.success(f"생성 완료! id: {wf['workflow_id']}")
             st.rerun()
         else:
@@ -94,7 +96,8 @@ with st.sidebar:
     st.divider()
     st.subheader(f"📋 등록된 워크플로우 ({count_workflows()})")
     for wf in list_workflows():
-        st.write(f"**{wf['name']}**")
+        badge = CATEGORY_LABELS.get(wf.get("category", "general"), "일반")
+        st.write(f"**{wf['name']}**  `{badge}`")
         st.caption(f"`{wf['workflow_id']}` · {wf['description']}")
 
     st.divider()
@@ -148,7 +151,7 @@ if p:
         for h in p["candidates"]:
             st.write(f"`{h['score']:.2f}` · **{h['name']}** · {h['workflow_id']}")
 
-    run_controls(p, list_workflows(), key="matched")
+    run_controls(p, list_workflows(category="system"), key="matched")
 
 # ── 실행 결과 ──────────────────────────────────────────
 if st.session_state.result:
