@@ -1,7 +1,8 @@
 """Streamlit UI (진입점). 실제 로직은 vectordb / llm 모듈에 있음."""
 import streamlit as st
 
-from llm import generate_answer, refine_answer
+from agent import run_agent
+from llm import refine_answer
 from vectordb import (
     count_points,
     find_existing_qa,
@@ -9,7 +10,6 @@ from vectordb import (
     reset_collection,
     save_document,
     save_to_db,
-    search_similar,
 )
 
 # ── 헤더 ───────────────────────────────────────────────
@@ -67,6 +67,10 @@ for item in st.session_state.history:
         st.write(item["answer"])
         if item.get("from_db"):
             st.caption(f"DB 참고 (유사도 {item['top_score']:.2f})")
+        if item.get("steps"):
+            with st.expander("🤖 에이전트가 한 일"):
+                for s in item["steps"]:
+                    st.write(s)
 
 # ── 피드백 UI (답변 직후) ─────────────────────────────
 if st.session_state.pending:
@@ -77,6 +81,10 @@ if st.session_state.pending:
         st.write(p["answer"])
         if p.get("from_db"):
             st.caption(f"DB 참고 (유사도 {p['top_score']:.2f})")
+        if p.get("steps"):
+            with st.expander("🤖 에이전트가 한 일"):
+                for s in p["steps"]:
+                    st.write(s)
 
     st.markdown("**이 답변, 구체적으로 알려주면 더 똑똑해져요.**")
     good = st.text_area("👍 도움이 된 점", placeholder="예: 단계별 설명이 이해하기 쉬웠어요", height=80)
@@ -127,16 +135,15 @@ if st.session_state.pending:
 if not st.session_state.pending:
     query = st.chat_input("무엇이든 물어보세요...")
     if query:
-        with st.spinner("검색 중..."):
-            context = search_similar(query)
+        with st.spinner("에이전트가 생각하는 중..."):
+            result = run_agent(query, st.session_state.history)
 
-        with st.spinner("답변 생성 중..."):
-            answer = generate_answer(query, context, st.session_state.history)
-
+        context = result["context"]
         st.session_state.pending = {
             "question": query,
-            "answer": answer,
+            "answer": result["answer"],
             "from_db": len(context) > 0,
-            "top_score": context[0]["score"] if context else 0.0,
+            "top_score": max((c["score"] for c in context), default=0.0),
+            "steps": result["steps"],
         }
         st.rerun()
