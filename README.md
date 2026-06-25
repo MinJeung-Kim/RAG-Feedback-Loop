@@ -89,7 +89,11 @@ streamlit run app.py
 
 ```
 .
-├── app.py        # Streamlit 앱 본체 (검색 · 생성 · 저장 · UI)
+├── app.py        # Streamlit UI (진입점)
+├── config.py     # 환경변수 · 상수 설정
+├── clients.py    # Qdrant / LLM 클라이언트 초기화
+├── vectordb.py   # 벡터 DB 검색 · 저장 · 문서 학습
+├── llm.py        # LLM 답변 생성 · 피드백 개선
 ├── run.ipynb     # 앱을 백그라운드로 띄우고 종료하는 노트북
 ├── .env          # 환경 변수 (직접 작성)
 └── README.md
