@@ -13,9 +13,9 @@ def init_clients():
         api_key=config.QDRANT_API_KEY,
         cloud_inference=True,
     )
-    if not qdrant.collection_exists(config.COLLECTION):
+    if not qdrant.collection_exists(config.WORKFLOW_COLLECTION):
         qdrant.create_collection(
-            collection_name=config.COLLECTION,
+            collection_name=config.WORKFLOW_COLLECTION,
             vectors_config=config.VECTORS_CONFIG,
         )
     llm = OpenAI(base_url=config.VLLM_URL, api_key=config.VLLM_API_KEY)
